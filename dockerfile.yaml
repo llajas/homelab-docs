@@ -6,6 +6,10 @@ services:
       - "5000:80"
     volumes:
       - static:/usr/share/nginx/html
+    logging:
+      options:
+        max-size: "30m"
+        max-file: "3"
   build:
     image: alpine:latest # TODO https://github.com/squidfunk/mkdocs-material/issues/2945
     working_dir: /usr/local/src
@@ -13,6 +17,10 @@ services:
     volumes:
       - static:/usr/share/nginx/html
     restart: always
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
 volumes:
   static:
     driver: local
