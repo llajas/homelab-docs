@@ -28,6 +28,6 @@ CMD nginx & while true; do \
                 mkdocs build; \
                 cp -RT ./site /usr/share/nginx/html; \
             fi; \
-            sleep 30; \
+            sleep 120; \
         done; \
     done
