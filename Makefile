@@ -16,7 +16,7 @@ else
 endif
 
 # --------------------------------------
-.PHONY: all build push run dev
+.PHONY: all build push run dev stop helm-install helm-upgrade helm-uninstall helm-template
 
 all: build push
 
@@ -45,3 +45,25 @@ dev:
 # Stop and clean up
 stop:
 	docker-compose down
+
+# Helm commands for Kubernetes deployment
+helm-install:
+	helm install homelab-docs ./helm/homelab-docs \
+	  --set image.repository=$(REGISTRY)/$(REPO) \
+	  --set image.tag=$(TAG) \
+	  --set config.repoUrl=$(REPO_URL)
+
+helm-upgrade:
+	helm upgrade homelab-docs ./helm/homelab-docs \
+	  --set image.repository=$(REGISTRY)/$(REPO) \
+	  --set image.tag=$(TAG) \
+	  --set config.repoUrl=$(REPO_URL)
+
+helm-uninstall:
+	helm uninstall homelab-docs
+
+helm-template:
+	helm template homelab-docs ./helm/homelab-docs \
+	  --set image.repository=$(REGISTRY)/$(REPO) \
+	  --set image.tag=$(TAG) \
+	  --set config.repoUrl=$(REPO_URL)
