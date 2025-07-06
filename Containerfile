@@ -19,6 +19,13 @@ WORKDIR /usr/local/src
 # Change ownership of working directory to appuser
 RUN chown -R appuser:appuser /usr/local/src /venv
 
+# Change ownership of nginx directories for non-root execution
+RUN chown -R appuser:appuser /var/cache/nginx /var/run /var/log/nginx /usr/share/nginx/html
+
+# Create nginx temp directories and set permissions
+RUN mkdir -p /var/cache/nginx/client_temp /var/cache/nginx/proxy_temp /var/cache/nginx/fastcgi_temp /var/cache/nginx/uwsgi_temp /var/cache/nginx/scgi_temp && \
+    chown -R appuser:appuser /var/cache/nginx
+
 # Set environment variables
 ENV PATH="/venv/bin:$PATH"
 
@@ -30,7 +37,7 @@ ENV UPDATE_INTERVAL="120"
 ENV NGINX_ROOT="/usr/share/nginx/html"
 
 # Copy custom nginx configuration if needed
-# COPY nginx.conf /etc/nginx/nginx.conf
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Configure nginx to log to stdout/stderr for Docker
 RUN ln -sf /dev/stdout /var/log/nginx/access.log && \
