@@ -1,6 +1,6 @@
 # --------- configurable bits ----------
 REGISTRY ?= registry.lajas.tech
-REPO     ?= homelab-documenatation
+REPO     ?= homelab-documentation
 TAG      := $(shell git describe --tags --always)
 REPO_URL ?= https://github.com/llajas/homelab
 
