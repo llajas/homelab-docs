@@ -28,11 +28,13 @@ This is a **single-container solution** based on `nginx:alpine` that:
 
 ### **Key Features**
 - 🔄 **Continuous Updates**: Automatically pulls and rebuilds on repository changes
-- 🔒 **Security Hardened**: Runs as non-root user (UID 1001)
+- 🔒 **Security Hardened**: Runs as non-root user (UID 1001) with minimal privileges
 - 📊 **Health Monitoring**: Built-in health checks and structured logging
-- 🎛️ **Configurable**: Repository URL and update interval via environment variables
-- 📝 **Access Logs**: Nginx logs show visitor IPs and request details
+- 🎛️ **Highly Configurable**: Repository URL and update interval via environment variables
+- 📝 **Complete Logging**: Application logs + nginx access logs with visitor IPs
 - 🚀 **Multiple Deployment Options**: Docker Compose, Kubernetes Helm chart, or standalone
+- ⚡ **Production Ready**: Resource limits, anti-affinity, and autoscaling support
+- 🌐 **Cloudflare Integration**: Helm chart optimized for Cloudflared tunnels
 
 ## **Quick Start**
 
@@ -98,6 +100,21 @@ docker run -d -p 5000:80 homelab-docs
 | `REPO` | `homelab-documenatation` | Repository name in registry |
 | `REPO_URL` | `https://github.com/llajas/homelab` | Git repository URL |
 
+### **Custom Repository Setup**
+```bash
+# Method 1: Environment variable
+export REPO_URL=https://github.com/yourusername/your-docs-repo
+make build
+
+# Method 2: .env file
+cp .env.example .env
+# Edit .env with your settings
+docker-compose up
+
+# Method 3: Build argument
+docker build --build-arg REPO_URL=https://github.com/yourusername/your-repo .
+```
+
 ## **Available Commands**
 
 ### **Docker Compose**
@@ -126,13 +143,42 @@ make helm-template   # Preview generated YAML
 
 The included Helm chart provides production-ready Kubernetes deployment with:
 
-- 🔄 **Multiple Replicas**: Run 2+ instances for high availability
+- 🔄 **Multiple Replicas**: Run 2+ instances for high availability (default: 2)
 - 🌐 **Ingress Support**: Easy setup for external access (perfect for Cloudflared)
-- 📈 **Horizontal Pod Autoscaling**: Automatically scale based on CPU usage
-- 🎯 **Pod Anti-Affinity**: Spread replicas across different nodes
-- 🛡️ **Security Context**: Non-root execution with proper permissions
+- 📈 **Horizontal Pod Autoscaling**: Automatically scale based on CPU usage (2-10 replicas)
+- 🎯 **Pod Anti-Affinity**: Spread replicas across different nodes for resilience
+- 🛡️ **Security Hardened**: Non-root execution (UID 1001) with dropped capabilities
 - ❤️ **Health Checks**: Kubernetes-native liveness and readiness probes
-- 📊 **Resource Management**: CPU/memory requests and limits
+- 📊 **Resource Management**: CPU/memory requests and limits configured
+- 🚀 **Rolling Updates**: Zero-downtime deployments with configurable strategy
+
+### **Helm Values Overview**
+```yaml
+# Key configuration options
+replicaCount: 2
+config:
+  repoUrl: "https://github.com/llajas/homelab"
+  updateInterval: 120
+
+# Resource limits
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# High availability
+affinity:
+  podAntiAffinity: enabled  # Spreads pods across nodes
+
+# Autoscaling (disabled by default)
+autoscaling:
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+```
 
 ### **Helm Configuration Examples**
 
@@ -142,15 +188,24 @@ helm install homelab-docs ./helm/homelab-docs \
   --set config.repoUrl=https://github.com/yourusername/your-docs \
   --set replicaCount=3
 
-# Enable ingress for external access
+# Enable ingress for external access via Cloudflared
 helm upgrade homelab-docs ./helm/homelab-docs \
   --set ingress.enabled=true \
-  --set ingress.hosts[0].host=docs.yourdomain.com
+  --set ingress.hosts[0].host=docs.yourdomain.com \
+  --set ingress.annotations."external-dns\.alpha\.kubernetes\.io/target"=your-tunnel.example.com
 
-# Enable autoscaling
+# Enable autoscaling for traffic spikes
 helm upgrade homelab-docs ./helm/homelab-docs \
   --set autoscaling.enabled=true \
   --set autoscaling.maxReplicas=5
+
+# Production deployment with custom settings
+helm install homelab-docs ./helm/homelab-docs \
+  --set config.repoUrl=https://github.com/company/docs \
+  --set config.updateInterval=300 \
+  --set replicaCount=3 \
+  --set resources.requests.memory=256Mi \
+  --set ingress.enabled=true
 ```
 
 ## **Monitoring & Logs**
@@ -189,7 +244,7 @@ The container produces two types of logs:
 # Check container logs
 docker-compose logs homelab-docs
 
-# Look for build errors
+# Test build manually
 docker exec -it homelab-docs_homelab-docs_1 /bin/sh
 cd /tmp/repo && mkdocs build
 ```
@@ -197,13 +252,31 @@ cd /tmp/repo && mkdocs build
 **Updates Not Detected**: Verify the repository branch
 ```bash
 # The container checks the 'master' branch by default
-# If your repo uses 'main', update the entrypoint script
+# If your repo uses 'main', you'll need to modify the entrypoint script
+# Future versions will auto-detect the default branch
 ```
 
 **Permission Issues**: The container runs as user 1001
 ```bash
-# Ensure file permissions allow read access
-# No special permissions needed for public repositories
+# Ensure your repository is publicly accessible
+# For private repos, you'll need to add SSH keys or tokens
+```
+
+**Helm Template Errors**: Validate your chart
+```bash
+# Test template rendering
+make helm-template
+
+# Debug with verbose output
+helm template homelab-docs ./helm/homelab-docs --debug
+```
+
+**Resource Limits**: Adjust if builds fail due to memory/CPU constraints
+```bash
+# Increase resources in values.yaml or via --set
+helm upgrade homelab-docs ./helm/homelab-docs \
+  --set resources.limits.memory=1Gi \
+  --set resources.limits.cpu=1000m
 ```
 
 ## **Why Not GitHub Pages?**
