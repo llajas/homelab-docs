@@ -1,46 +1,25 @@
-version: '3'
+version: '3.8'
 services:
-  nginx:
-    image: nginx:latest
+  homelab-docs:
+    build:
+      context: .
+      dockerfile: Containerfile
+      args:
+        - REPO_URL=${REPO_URL:-https://github.com/llajas/homelab}
     ports:
       - "5000:80"
-    volumes:
-      - static:/usr/share/nginx/html
+    environment:
+      - REPO_URL=${REPO_URL:-https://github.com/llajas/homelab}
+      - UPDATE_INTERVAL=${UPDATE_INTERVAL:-120}
+    restart: unless-stopped
     logging:
+      driver: "json-file"
       options:
         max-size: "30m"
         max-file: "3"
-
-  build:
-    image: alpine:latest
-    working_dir: /usr/local/src
-    command: >
-      /bin/sh -c "
-      apk add git python3 py3-pip &&
-      python3 -m venv /usr/local/venv &&
-      source /usr/local/venv/bin/activate &&
-      pip install mkdocs-material &&
-      git clone https://github.com/llajas/homelab . &&
-      mkdocs build &&
-      cp -RT ./site /usr/share/nginx/html &&
-      while true; do
-        git fetch origin &&
-        git diff HEAD origin/master --exit-code &&
-        if [ $$? -eq 1 ]; then
-          git reset --hard origin/master &&
-          mkdocs build &&
-          cp -RT ./site /usr/share/nginx/html;
-        fi;
-        sleep 120;
-      done"
-    volumes:
-      - static:/usr/share/nginx/html
-    restart: always
-    logging:
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-volumes:
-  static:
-    driver: local
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
